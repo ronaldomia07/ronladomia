@@ -7,7 +7,7 @@ import { StreamItem, Room, Message, User } from "./src/types";
 
 async function startServer() {
   const app = express();
-  const PORT = 3000;
+  const PORT = process.env.PORT ? parseInt(process.env.PORT) : 3000;
 
   // Middleware
   app.use(express.json({ limit: "15mb" }));
@@ -123,6 +123,56 @@ async function startServer() {
 
     broadcastPublicRooms();
   }
+
+  // ------------------------------------------------------------
+  // ADMIN AUTHENTICATION MIDDLEWARE
+  // ------------------------------------------------------------
+  const adminAuth = (req: any, res: any, next: any) => {
+    // Skip verification check route
+    if (req.path === "/verify") {
+      return next();
+    }
+    
+    const clientPass = req.headers["x-admin-password"];
+    const serverPass = process.env.ADMIN_PASSWORD || "admin123";
+    
+    if (clientPass && clientPass === serverPass) {
+      return next();
+    }
+    
+    return res.status(401).json({ error: "Unauthorized administrative access. Please unlock console with passcode." });
+  };
+
+  // Mount admin authorization middleware
+  app.use("/api/admin", adminAuth);
+
+  // Helper middleware for write operations on /api/streams
+  const protectStreamsWrite = (req: any, res: any, next: any) => {
+    if (req.method === "GET") {
+      return next();
+    }
+    const clientPass = req.headers["x-admin-password"];
+    const serverPass = process.env.ADMIN_PASSWORD || "admin123";
+    
+    if (clientPass && clientPass === serverPass) {
+      return next();
+    }
+    
+    return res.status(401).json({ error: "Unauthorized administrative write access." });
+  };
+
+  // Mount streams write protection middleware
+  app.use("/api/streams", protectStreamsWrite);
+
+  // Verify admin password endpoint
+  app.post("/api/admin/verify", (req, res) => {
+    const { password } = req.body;
+    const serverPass = process.env.ADMIN_PASSWORD || "admin123";
+    if (password === serverPass) {
+      return res.json({ success: true });
+    }
+    return res.status(401).json({ error: "Invalid administrative passcode" });
+  });
 
   // ------------------------------------------------------------
   // API Routes
