@@ -1,0 +1,6 @@
+{
+  "name": "IPTV Watch Party",
+  "description": "A real-time watch party and IPTV streaming platform with synchronized playback, live chat, and moderation.",
+  "requestFramePermissions": ["microphone"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
